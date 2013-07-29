@@ -50,9 +50,16 @@ parse_options() {
     shift
   done
 
-  mysql="mysql --defaults-file=$GETSLOW_CONFIG_FILE"
-  mysqladmin="mysqladmin --defaults-file=$GETSLOW_CONFIG_FILE"
+  if [ -e $GETSLOW_CONFIG_FILE ]
+  then  
+  	mysql="mysql --defaults-file=$GETSLOW_CONFIG_FILE"
+  	mysqladmin="mysqladmin --defaults-file=$GETSLOW_CONFIG_FILE"
+  else
+	mysql=$(which mysql)
+	mysqladmin=$(which mysqladmin)
+  fi
 }
+
 
 # ------------------------------------------------------------
 
@@ -74,18 +81,23 @@ version_check() {
     echo "This tool does not support MySQL version 5.0 or older. " 1>&2
     exit 1
   fi
-
   version_comment=`$mysql -B -N -e "SELECT @@version_comment"`
   PERCONA=`echo "$version_comment" | grep -ci "percona"`
   MARIADB=`echo "$version_comment" | grep -ci "mariadb"`
 
   if [ $PERCONA -ne 0 -o $MARIADB -ne 0 ] ; then
     if [ $version_major -eq 5 -a $version_minor -eq 5 ] ; then
-      : ${GETSLOW_VERBOSITY:="microtime,query_plan,innodb,profiling"}
+      if [ $MARIADB -ne 0 ] ; then
+      	: ${GETSLOW_VERBOSITY:="query_plan,innodb"}
+      else
+      	: ${GETSLOW_VERBOSITY:="microtime,query_plan,innodb,profiling"}
+	: ${GETSLOW_GLOBAL_CONTROL:="all"}
+      fi
     fi
     : ${GETSLOW_VERBOSITY:="microtime,query_plan,innodb"}
     : ${GETSLOW_LOG_FILTER:=""}
     : ${GETSLOW_RATE_LIMIT:=""}
+    : ${GETSLOW_GLOBAL_CONTROL:="all"}
   fi
 
   if [ $PERCONA -ne 0 ] ; then
@@ -99,9 +111,11 @@ version_check() {
     if [ $version_major -eq 5 -a $version_minor -eq 5 -a $version_point -lt 10 ] ; then
       opt_slow_query_log_timestamp_precision="slow_query_log_microseconds_timestamp"
       opt_slow_query_log_timestamp_always="log_slow_timestamp_every"
+      opt_slow_query_log_use_global_control="use_global_log_slow_control"
     else
       opt_slow_query_log_timestamp_precision="slow_query_log_timestamp_precision"
       opt_slow_query_log_timestamp_always="slow_query_log_timestamp_always"
+      opt_slow_query_log_use_global_control="slow_query_log_use_global_control"
     fi
 
     if [ $version_major -eq 5 -a $version_minor -lt 5 ] ; then
@@ -134,6 +148,7 @@ discover_all() {
     [ -z "$GETSLOW_SP_STATEMENTS" ] || discover_one "log_slow_sp_statements"
     [ -z "$GETSLOW_TIMESTAMP_ALWAYS" ] || discover_one "$opt_slow_query_log_timestamp_always"
     [ -z "$GETSLOW_TIMESTAMP_PRECISION" ] || discover_one "$opt_slow_query_log_timestamp_precision"
+    [ -z "$GETSLOW_GLOBAL_CONTROL" ] || discover_one  "$opt_slow_query_log_use_global_control"
   fi
 
   if [ $MARIADB -ne 0 ] ; then
@@ -169,6 +184,7 @@ set_all() {
     [ -z "$GETSLOW_SP_STATEMENTS" ] || set_one "log_slow_sp_statements" "$GETSLOW_SP_STATEMENTS"
     [ -z "$GETSLOW_TIMESTAMP_ALWAYS" ] || set_one "$opt_slow_query_log_timestamp_always" "$GETSLOW_TIMESTAMP_ALWAYS"
     [ -z "$GETSLOW_TIMESTAMP_PRECISION" ] || set_one "$opt_slow_query_log_timestamp_precision" "'$GETSLOW_TIMESTAMP_PRECISION'"
+    [ -z "$GETSLOW_GLOBAL_CONTROL" ] || set_one "$opt_slow_query_log_use_global_control" "'$GETSLOW_GLOBAL_CONTROL'"
   fi
 
   if [ $MARIADB -ne 0 ] ; then
@@ -206,6 +222,7 @@ restore_all() {
     [ -z "$GETSLOW_SP_STATEMENTS" ] || restore_one "log_slow_sp_statements" "$log_slow_sp_statements"
     [ -z "$GETSLOW_TIMESTAMP_ALWAYS" ] || restore_one "slow_query_log_timestamp_always" "$slow_query_log_timestamp_always"
     [ -z "$GETSLOW_TIMESTAMP_PRECISION" ] || restore_one "slow_query_log_timestamp_precision" "$slow_query_log_timestamp_precision"
+    [ -z "$GETSLOW_GLOBAL_CONTROL" ] || restore_one "slow_query_log_use_global_control" "'$slow_query_log_use_global_control'"
   fi
 
   if [ $MARIADB -ne 0 ] ; then
@@ -245,7 +262,7 @@ version_check
 
 discover_all
 
-trap restore_all INT TERM EXIT
+trap restore_all INT TERM EXIT SIGINT SIGQUIT SIGTERM
 
 set_all
 
