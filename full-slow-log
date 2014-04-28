@@ -171,6 +171,7 @@ set_all() {
   start_time=`date +%Y%m%d%H%M%S`
   : ${GETSLOW_LOG_FILE:="${slow_query_log_file}-full-${start_time}"}
   set_one "slow_query_log_file" "'$GETSLOW_LOG_FILE'"
+  echo "Slow query log is : $GETSLOW_LOG_FILE"
   set_one "long_query_time" "$GETSLOW_LONG_QUERY_TIME"
 
   if [ $PERCONA -ne 0 -o $MARIADB -ne 0 ] ; then
