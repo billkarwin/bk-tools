@@ -90,7 +90,7 @@ version_check() {
       if [ $MARIADB -ne 0 ] ; then
       	: ${GETSLOW_VERBOSITY:="query_plan,innodb"}
       else
-      	: ${GETSLOW_VERBOSITY:="microtime,query_plan,innodb,profiling"}
+      	: ${GETSLOW_VERBOSITY:="microtime,query_plan,innodb"}
 	: ${GETSLOW_GLOBAL_CONTROL:="all"}
       fi
     fi
