@@ -96,7 +96,11 @@ version_check() {
     : ${GETSLOW_TIMESTAMP_ALWAYS:=""}
     : ${GETSLOW_TIMESTAMP_PRECISION:=""}
 
-    if [ $version_major -eq 5 -a $version_minor -eq 5 -a $version_point -lt 10 ] ; then
+    if [ $version_major -eq 5 -a $version_minor -eq 1 ] ; then
+      opt_slow_query_log_timestamp_precision="slow_query_log_microseconds_timestamp"
+      opt_slow_query_log_timestamp_always="log_slow_timestamp_every"
+      opt_slow_query_log_use_global_control="use_global_log_slow_control"
+    elif [ $version_major -eq 5 -a $version_minor -eq 5 -a $version_point -lt 10 ] ; then
       opt_slow_query_log_timestamp_precision="slow_query_log_microseconds_timestamp"
       opt_slow_query_log_timestamp_always="log_slow_timestamp_every"
       opt_slow_query_log_use_global_control="use_global_log_slow_control"
@@ -203,11 +207,11 @@ restore_all() {
   restore_one "long_query_time" "$long_query_time"
 
   if [ $PERCONA -ne 0 ] ; then
-    [ -z "$GETSLOW_GLOBAL_CONTROL" ] || restore_one "slow_query_log_use_global_control" "'$slow_query_log_use_global_control'"
+    [ -z "$GETSLOW_GLOBAL_CONTROL" ] || restore_one "$opt_slow_query_log_use_global_control" "'$slow_query_log_use_global_control'"
     [ -z "$GETSLOW_RATE_TYPE" ] || restore_one "log_slow_rate_type" "'$log_slow_rate_type'"
     [ -z "$GETSLOW_SP_STATEMENTS" ] || restore_one "log_slow_sp_statements" "$log_slow_sp_statements"
-    [ -z "$GETSLOW_TIMESTAMP_ALWAYS" ] || restore_one "slow_query_log_timestamp_always" "$slow_query_log_timestamp_always"
-    [ -z "$GETSLOW_TIMESTAMP_PRECISION" ] || restore_one "slow_query_log_timestamp_precision" "$slow_query_log_timestamp_precision"
+    [ -z "$GETSLOW_TIMESTAMP_ALWAYS" ] || restore_one "$opt_slow_query_log_timestamp_always" "$slow_query_log_timestamp_always"
+    [ -z "$GETSLOW_TIMESTAMP_PRECISION" ] || restore_one "$opt_slow_query_log_timestamp_precision" "$slow_query_log_timestamp_precision"
   fi
 
   if [ $PERCONA -ne 0 -o $MARIADB -ne 0 ] ; then
