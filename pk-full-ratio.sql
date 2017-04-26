@@ -36,6 +36,7 @@ drop table if exists i;
 drop table if exists ui;
 drop table if exists bi;
 drop table if exists ubi;
+drop table if exists spk;
 
 create table ti (id tinyint auto_increment primary key) auto_increment=100;
 insert into ti () values ();
@@ -57,6 +58,8 @@ create table bi (id bigint auto_increment primary key) auto_increment=1000000000
 insert into bi () values ();
 create table ubi (id bigint unsigned auto_increment primary key) auto_increment=10000000000000000;
 insert into ubi () values ();
+create table spk (id tinyint auto_increment, v varchar(10), primary key (v), key (id)) auto_increment=100;
+insert into spk (v) values ('foo');
 */
 
 select concat('`', table_schema, '`.`', table_name, '`.`', column_name, '`') as `column`,
@@ -71,6 +74,5 @@ from (select table_schema, table_name, column_name, auto_increment,
     end+(column_type like '% unsigned'))-1 as max_int
   from information_schema.tables t
   join information_schema.columns c using (table_schema,table_name)
-  join information_schema.key_column_usage k using (table_schema,table_name,column_name)
-  where t.table_schema in ('test') and k.constraint_name = 'PRIMARY' and t.auto_increment is not null
+  where t.table_schema in ('test') and c.extra = 'auto_increment' and t.auto_increment is not null
 ) as dt;
