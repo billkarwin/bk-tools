@@ -60,7 +60,7 @@ insert into ubi () values ();
 */
 
 select concat('`', table_schema, '`.`', table_name, '`.`', column_name, '`') as `column`,
-  auto_increment as `max_int`, round(auto_increment*100/max_int, 2) as `pct_max`
+  auto_increment as `current_int`, max_int, round((auto_increment/max_int)*100, 2) as `pct_max`
 from (select table_schema, table_name, column_name, auto_increment,
   pow(2, case data_type
     when 'tinyint'   then 7
@@ -72,5 +72,8 @@ from (select table_schema, table_name, column_name, auto_increment,
   from information_schema.tables t
   join information_schema.columns c using (table_schema,table_name)
   join information_schema.key_column_usage k using (table_schema,table_name,column_name)
-  where t.table_schema in ('test') and k.constraint_name = 'PRIMARY' and t.auto_increment is not null
+  where t.table_schema in ('test')
+    and k.constraint_name = 'PRIMARY'
+    and k.ordinal_position = 1
+    and t.auto_increment is not null
 ) as dt;
