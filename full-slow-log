@@ -6,17 +6,17 @@
 # then restore the previous slow-query log settings.
 #
 # Copyright 2012 Bill Karwin.
-# 
+#
 # This program is free software: you can redistribute it and/or modify
 # it under the terms of the GNU General Public License as published by
 # the Free Software Foundation, either version 3 of the License, or
 # (at your option) any later version.
-# 
+#
 # This program is distributed in the hope that it will be useful,
 # but WITHOUT ANY WARRANTY; without even the implied warranty of
 # MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
 # GNU General Public License for more details.
-# 
+#
 # You should have received a copy of the GNU General Public License
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
 #
@@ -28,8 +28,53 @@
 : ${GETSLOW_LONG_QUERY_TIME:="0"}
 : ${GETSLOW_VERBOSE:="0"}
 
+get_help() {
+  cat <<EOMESSAGE
+full-slow-log - Create a detailed slow-query-log for reporting
+
+full-slow-log enables the slow-query logging for all queries for a given time
+window and redirects it to a datestamped log file, then restores the initial
+slow-query log settings.
+
+OPTIONS
+
+  -c filename
+
+     Specify the location of a my.cnf containing the database dsn, you
+     want to connect to.
+
+  -f filename
+
+     Specify the location of the output file mysql should write the querys to.
+     By default the script will use the already configured path of
+     slow_query_log_file found during runtime and append the following string
+     to the path: -full-2016042800
+
+     The file needs to be writeable by mysql user.
+
+  -l secs
+
+     Specify the long_query_time to set, by default long_query_time is set
+     to 0, which equals to logging all querys. Default: 5 seconds
+
+  -s secs
+
+     Time in seconds to record the log for before the script will restore the
+     original settings.
+
+  -v
+
+     Enable verbose logging.
+
+EOMESSAGE
+
+  exit 0
+}
+
+# ------------------------------------------------------------
+
 parse_options() {
-  options=`getopt c:f:l:s:v $*`
+  options=`getopt c:f:l:s:v:h $*`
   if [ $? -ne 0 ] ; then
     echo "$0: unrecognized options." 2>&1
     exit 1
@@ -43,6 +88,7 @@ parse_options() {
     -l) GETSLOW_LONG_QUERY_TIME="$2" ; shift ;;
     -s) GETSLOW_SLEEP_TIME="$2" ;;
     -v) GETSLOW_VERBOSE=1 ;;
+    -h) get_help ;;
     (--) shift ; break ;;
     (-*) echo "$0: error - unrecognized option $1" 1>&2 ; exit 1 ;;
     (*) break ;;
@@ -52,9 +98,12 @@ parse_options() {
 
   mysql=`which mysql`
   mysqladmin=`which mysqladmin`
-  if [ -e $GETSLOW_CONFIG_FILE ] ; then
+  if [ -r $GETSLOW_CONFIG_FILE ] ; then
     mysql="$mysql --defaults-extra-file=$GETSLOW_CONFIG_FILE"
     mysqladmin="$mysqladmin --defaults-extra-file=$GETSLOW_CONFIG_FILE"
+  else
+    echo "Cannot read config file ${GETSLOW_CONFIG_FILE}"
+    exit 1
   fi
 }
 
@@ -268,6 +317,3 @@ sleep $GETSLOW_SLEEP_TIME
 # Let the trap restore all the settings on EXIT.
 
 exit 0
-
-# ------------------------------------------------------------
-
